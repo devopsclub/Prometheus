@@ -48,7 +48,7 @@ scrape_configs:
 scrape_configs:
  - job_name: 'mysqld'
    static_configs:
-   - targets: ['localhost:9099']
+   - targets: ['localhost:9104']
 
 # FPM
 scrape_configs:
