@@ -17,55 +17,55 @@ sudo apt-get update
 sudo apt-get install prometheus
 sudo apt-get install prometheus-node-exporter
 
-cat <<EOT>> /etc/prometheus/prometheus.yml
+cat <<EOT > /etc/prometheus/prometheus.yml
 #Setup Prometheus.yml
 
 global:
- scrape_interval: 10spr
+ scrape_interval: 10s
  evaluation_interval: 5s
 
 #Prometheus
 scrape_configs:
   - job_name: "prometheus"
     scrape_interval: "5s"
-    static_configs:
+    target_groups:
     - targets: ['localhost:9090']
 
 #Node exports
 scrape_configs:
   - job_name: "node"
     scrape_interval: "5s"
-    static_configs:
+    target_groups:
     - targets: ['localhost:9100']
 
 # Redis
 scrape_configs:
-	- job_name: redis_exporter
-	  static_configs:
-	  - targets: ['localhost:9121']
+  - job_name: redis_exporter
+    target_groups:
+    - targets: ['localhost:9121']
 
 # MySQL
 scrape_configs:
  - job_name: 'mysqld'
-   static_configs:
+   target_groups:
    - targets: ['localhost:9104']
 
 # FPM
 scrape_configs:
   - job_name: 'fpm'
-    static_configs:
+    target_groups:
     - targets: ['localhost:9099']
 
 # NGINX
 scrape_configs:
   - job_name: 'nginx'
-    static_configs:
+    target_groups:
     - targets: ['localhost:9113']
 
 # Elastic
 scrape_configs:
   - job_name: 'elastic'
-    static_configs:
+    target_groups:
     - targets: ['localhost:9108']
 
 EOT
@@ -78,7 +78,7 @@ sudo apt-get install golang
 mkdir ~/go
 mkdir ~/logs
 
-cat <<EOT>> /etc/profile.d/goenv.sh
+cat <<EOT > /etc/profile.d/goenv.sh
 export GOROOT=/usr/lib/go
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
@@ -183,7 +183,7 @@ echo " -> PHPFM exporter installed ..."
 
 #cat <<EOT>> /etc/init/prometheus_server_start.conf
 
-cat <<EOT>> /etc/systemd/system/prometheus-server.service
+cat <<EOT > /etc/systemd/system/prometheus-server.service
 
 [Unit]
 After=mysql.service
@@ -196,7 +196,7 @@ WantedBy=default.target
 
 EOT
 
-cat <<EOT>> /usr/local/bin/prometheus-server.sh
+cat <<EOT > /usr/local/bin/prometheus-server.sh
 #!/bin/sh
 
 cd ~/phpfpm_exporter/bin/
@@ -217,6 +217,10 @@ sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
 cd ~/go/src/github.com/prometheus/mysqld_exporter
 
 sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
+
+cd /usr/bin
+
+sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
 
 EOT
 
