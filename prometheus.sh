@@ -53,8 +53,6 @@ sudo chmod 777 ~/Prometheus/server/prometheus.log
 
 sudo chmod 777 ~/Prometheus/server/prometheus.yml
 
-sudo nohup ./prometheus > prometheus.log 2>&1 &
-
 echo “Done!”
 
-sudo /usr/bin/node_exporter
+# sudo /usr/bin/node_exporter
