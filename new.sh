@@ -5,18 +5,6 @@ echo "Prometheus & al install script"
 
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
 
-cd ~/Prometheus/src/
-
-chmod +x elastic.sh
-chmod +x go.sh
-chmod +x mysql.sh
-chmod +x nginx.sh
-chmod +x phpfm.sh
-chmod +x prometheus-server.sh
-chmod +x prometheus.sh
-
-cd ~/
-
 
 read -p "Install prometheus, node_exporter? (y/n)" PROMETHEUS
 if [ "$PROMETHEUS" = "y" ]; then
@@ -25,7 +13,58 @@ sudo apt-get update
 sudo apt-get install prometheus
 sudo apt-get install prometheus-node-exporter
 
-sh ./src/prometheus.sh
+cat <<EOT > /etc/prometheus/prometheus.yml
+#Setup Prometheus.yml
+
+global:
+ scrape_interval: 10s
+ evaluation_interval: 5s
+
+#Prometheus
+scrape_configs:
+  - job_name: "prometheus"
+    scrape_interval: "5s"
+    target_groups:
+    - targets: ['localhost:9090']
+
+#Node exports
+scrape_configs:
+  - job_name: "node"
+    scrape_interval: "5s"
+    target_groups:
+    - targets: ['localhost:9100']
+
+# Redis
+scrape_configs:
+  - job_name: redis_exporter
+    target_groups:
+    - targets: ['localhost:9121']
+
+# MySQL
+scrape_configs:
+ - job_name: 'mysqld'
+   target_groups:
+   - targets: ['localhost:9104']
+
+# FPM
+scrape_configs:
+  - job_name: 'fpm'
+    target_groups:
+    - targets: ['localhost:9099']
+
+# NGINX
+scrape_configs:
+  - job_name: 'nginx'
+    target_groups:
+    - targets: ['localhost:9113']
+
+# Elastic
+scrape_configs:
+  - job_name: 'elastic'
+    target_groups:
+    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9113','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100']
+
+EOT
 
 cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
@@ -42,7 +81,29 @@ fi
 
 
 # Setup prometheus server service
-sh ./src/prometheus-server.sh
+
+cat <<EOT > /etc/systemd/system/prometheus-server.service
+
+[Unit]
+After=mysql.service
+
+[Service]
+ExecStart=/usr/local/bin/prometheus-server.sh
+
+[Install]
+WantedBy=default.target
+
+EOT
+
+cat <<EOT > /usr/local/bin/prometheus-server.sh
+#!/bin/sh
+
+
+EOT
+
+chmod 744 /usr/local/bin/prometheus-server.sh
+
+chmod 664 /etc/systemd/system/prometheus-server.service
 
 read -p "Install GoLang? (y/n) - required for most exporters" GO
 if [ "$GO" = "y" ]; then
@@ -111,8 +172,6 @@ mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test'
 mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
 mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
 
-export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
-
 go get -u github.com/prometheus/mysqld_exporter
 
 cd ~/go/src/github.com/prometheus/mysqld_exporter
@@ -120,6 +179,8 @@ cd ~/go/src/github.com/prometheus/mysqld_exporter
 go get
 
 go build
+
+export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
 
 echo " -> This will take a while ... "
 
@@ -145,7 +206,15 @@ fi
 read -p "Install nginx_exporter? (y/n)" NGINX
 if [ "$NGINX" = "y" ]; then
 
-sh ./src/nginx.sh
+go get -u github.com/discordianfish/nginx_exporter
+
+cd ~/go/src/github.com/discordianfish/nginx_exporter
+
+go get
+
+go build
+
+echo " -> NGINX exporter installed ..."
 
 cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
@@ -164,7 +233,15 @@ fi
 read -p "Install phpfm_exporter? (y/n)" PHPFM
 if [ "$PHPFM" = "y" ]; then
 
-sh ./src/phpfm.sh
+cd ~/
+
+git clone https://github.com/craigmj/phpfpm_exporter
+
+cd phpfpm_exporter/
+
+./build.sh
+
+echo " -> PHPFM exporter installed ..."
 
 cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
@@ -182,7 +259,15 @@ fi
 read -p "Install elastic_exporter services? (y/n)" ELASTIC
 if [ "$ELASTIC" = "y" ]; then
 
-sh ./src/elastic.sh
+go get -u github.com/justwatchcom/elasticsearch_exporter
+
+cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
+
+go get
+
+go build
+
+echo " -> ElasticSearch exporter installed ..."
 
 cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
