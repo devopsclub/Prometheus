@@ -5,22 +5,22 @@ echo "Prometheus & al install script"
 
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
 
-
 read -p "Install prometheus, node_exporter? (y/n)" PROMETHEUS
 if [ "$PROMETHEUS" = "y" ]; then
-	sudo apt-get update
-	sudo apt-get install prometheus
-	sudo apt-get install prometheus-node-exporter
 
-	sh ./src/prometheus.sh
+sudo apt-get update
+sudo apt-get install prometheus
+sudo apt-get install prometheus-node-exporter
 
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+sh ./src/prometheus.sh
 
-	cd /usr/bin
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
+cd /usr/bin
 
-	EOT
+sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
+
+EOT
 
 	echo “ -> Configured prometheus ...”
 else
@@ -43,94 +43,104 @@ fi
 
 read -p "Redis password: (Enter to skip redis_exporter)" REDISPASS
 if [ "$REDISPASS" != "" ]; then
-	echo "Installing redis_exporter..."
 
-	go get www.github.com/oliver006/redis_exporter.git
+echo "Installing redis_exporter..."
 
-	cd ~/go/src/github.com/oliver006/redis_exporter
+go get www.github.com/oliver006/redis_exporter.git
 
-	go get
+cd ~/go/src/github.com/oliver006/redis_exporter
 
-	go build
+go get
 
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+go build
 
-	cd ~/go/src/github.com/oliver006/redis_exporter
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	sudo nohup ./redis_exporter --redis.password"${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
-	
-	EOT
+cd ~/go/src/github.com/oliver006/redis_exporter
 
-	echo " -> Redis exporter installed ..."
+sudo nohup ./redis_exporter --redis.password="${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
+
+EOT
+
+echo " -> Redis exporter installed ..."
+
 else
- 	echo "Skipping redis_exporter installation."
+ 
+echo "Skipping redis_exporter installation."
+
 fi
 
 
 read -p "MySQL root password: (Enter to skip mysql_exporter)" MYSQLPASS
 if [ "$MYSQLPASS" != "" ]; then
-	echo "Installing mysql_exporter..."
+echo "Installing mysql_exporter..."
 
-    mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;"
-    mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
-    mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
+mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;"
+mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
+mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
 
-    export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
+export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
 
-    go get -u github.com/prometheus/mysqld_exporter
+go get -u github.com/prometheus/mysqld_exporter
 
-	cd ~/go/src/github.com/prometheus/mysqld_exporter
+cd ~/go/src/github.com/prometheus/mysqld_exporter
 
-	go get
+go get
 
-	go build
+go build
 
-	echo " -> This will take a while ... "
+echo " -> This will take a while ... "
 
-	make
+make
 
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	cd ~/go/src/github.com/prometheus/mysqld_exporter
+cd ~/go/src/github.com/prometheus/mysqld_exporter
 
-	sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
+sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
 
-	EOT
+EOT
 
-	echo " -> MYSQL exporter installed ..."
+echo " -> MYSQL exporter installed ..."
 
 else
- 	echo "Skipping mySQL installation."
+ 	
+echo "Skipping mySQL installation."
+
 fi
 
 
 read -p "Install nginx_exporter? (y/n)" NGINX
 if [ "$NGINX" = "y" ]; then
-	sh ./src/nginx.sh
-	
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
+sh ./src/nginx.sh
 
-	cd ~/go/src/github.com/prometheus/mysqld_exporter
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	EOT
+sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
+
+cd ~/go/src/github.com/prometheus/mysqld_exporter
+
+EOT
 
 else
- 	echo "Skipping nginx installation."
+ 
+echo "Skipping nginx installation."
+
 fi
 
 read -p "Install phpfm_exporter? (y/n)" PHPFM
 if [ "$PHPFM" = "y" ]; then
-	sh ./src/phpfm.sh
 
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+sh ./src/phpfm.sh
 
-	cd ~/phpfpm_exporter/bin/
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
+cd ~/phpfpm_exporter/bin/
 
-	EOT
+sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
+
+EOT
 
 else
  	echo "Skipping phpfm installation."
@@ -139,17 +149,20 @@ fi
 
 read -p "Install elastic_exporter services? (y/n)" ELASTIC
 if [ "$ELASTIC" = "y" ]; then
-	sh ./src/elastic.sh
 
-	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+sh ./src/elastic.sh
 
-	cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-	sudo nohup ./elasticsearch_exporter > ~/logs/elasticsearch_exporter.log 2>&1 &
+cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
 
-	EOT
+sudo nohup ./elasticsearch_exporter > ~/logs/elasticsearch_exporter.log 2>&1 &
+
+EOT
 else
-	echo "Skipping elastic_exporter installation."
+
+echo "Skipping elastic_exporter installation."
+
 fi
 
 
