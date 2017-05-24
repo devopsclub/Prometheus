@@ -1,0 +1,30 @@
+
+Run these before prometheus.sh for installation
+
+
+## Mysql Exporter ##
+
+run:
+export DATA_SOURCE_NAME='mysqld:test@unix(/var/run/mysqld/mysqld.sock)/'
+
+In mysql (mysql -u root -p), run the following:
+
+CREATE USER 'mysqld' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;
+
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'localhost';
+
+FLUSH PRIVILEGES;
+
+###
+
+REDIs pass: kumipallo
+
+
+
+
+mysql -uroot -ptest -e "FLUSH PRIVILEGES;"
+
+
+
+
+

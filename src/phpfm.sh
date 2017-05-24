@@ -1,8 +1,10 @@
 #!/bin/bash
-# Redis export Install Script
-cd ~/Downloads
+cd ~/
 
 git clone https://github.com/craigmj/phpfpm_exporter
 
-cd phpfpm_exporter
+cd phpfpm_exporter/
+
 ./build.sh
+
+echo " -> PHPFM exporter installed ..."
