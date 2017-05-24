@@ -7,13 +7,13 @@ echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_expo
 
 cd ~/Prometheus/src/
 
-chmod 755 elastic.sh
-chmod 755 go.sh
-chmod 755 mysql.sh
-chmod 755 nginx.sh
-chmod 755 phpfm.sh
-chmod 755 prometheus-server.sh
-chmod 755 prometheus.sh
+chmod 777 elastic.sh
+chmod 777 go.sh
+chmod 777 mysql.sh
+chmod 777 nginx.sh
+chmod 777 phpfm.sh
+chmod 777 prometheus-server.sh
+chmod 777 prometheus.sh
 
 cd ~/
 
@@ -46,7 +46,26 @@ sh ./src/prometheus-server.sh
 
 read -p "Install GoLang? (y/n) - required for most exporters" GO
 if [ "$GO" = "y" ]; then
-sh ./src/go.sh
+# sh ./src/go.sh
+
+#!/bin/bash
+sudo apt-get install golang
+
+# Set Go variables
+mkdir ~/go
+mkdir ~/logs
+
+cat <<EOT > /etc/profile.d/goenv.sh
+export GOROOT=/usr/lib/go
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+EOT
+
+export GOROOT=/usr/lib/go
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+source /etc/profile.d/goenv.sh
 
 echo “ -> Configured Golang ...”
 else
