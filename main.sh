@@ -22,9 +22,9 @@ sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
 
 EOT
 
-	echo “ -> Configured prometheus ...”
+echo “ -> Configured prometheus ...”
 else
-	echo "Skipping prometheus, node_exporter install."
+echo "Skipping prometheus, node_exporter install."
 fi
 
 
@@ -33,11 +33,11 @@ sh ./src/prometheus-server.sh
 
 read -p "Install GoLang? (y/n) - required for most exporters" GO
 if [ "$GO" = "y" ]; then
-	sh ./src/go.sh
+sh ./src/go.sh
 
-	echo “ -> Configured Golang ...”
+echo “ -> Configured Golang ...”
 else
-	echo "Skipping golang install."
+echo "Skipping golang install."
 fi
 
 
