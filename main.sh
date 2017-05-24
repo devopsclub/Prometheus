@@ -14,6 +14,14 @@ if [ "$PROMETHEUS" = "y" ]; then
 
 	sh ./src/prometheus.sh
 
+	cat <<EOT >> /usr/local/bin/prometheus-server.sh
+
+	cd /usr/bin
+
+	sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
+
+	EOT
+
 	echo “ -> Configured prometheus ...”
 else
 	echo "Skipping prometheus, node_exporter install."
@@ -64,7 +72,7 @@ if [ "$MYSQLPASS" != "" ]; then
 	echo "Installing mysql_exporter..."
 
     mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;"
-    mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter'@'localhost';"
+    mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
     mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
 
     export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
