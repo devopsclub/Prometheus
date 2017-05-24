@@ -58,11 +58,17 @@ scrape_configs:
     target_groups:
     - targets: ['localhost:9147']
 
+# APACHE
+scrape_configs:
+  - job_name: 'apache'
+    target_groups:
+    - targets: ['localhost:9117']
+
 # Elastic
 scrape_configs:
   - job_name: 'elastic'
     target_groups:
-    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9147','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100']
+    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9147','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100', 'localhost:9117']
 
 EOT
 
@@ -131,6 +137,33 @@ source /etc/profile.d/goenv.sh
 echo “ -> Configured Golang ...”
 else
 echo "Skipping golang install."
+fi
+
+read -p "Install Apache exporter? (y/n)" APACHE
+if [ "$APACHE" = "y" ]; then
+
+go get github.com/neezgee/apache_exporter
+
+cd ~/go/src/github.com/neezgee/apache_exporter
+
+go get
+
+go build
+
+
+cat <<EOT >> /usr/local/bin/prometheus-server.sh
+
+cd ~/go/src/github.com/neezgee/apache_exporter
+
+sudo nohup ./apache_exporter > ~/logs/apache_exporter.log 2>&1 &
+
+
+EOT
+
+
+echo “ -> Configured Apache ...”
+else
+echo "Skipping apache_exporter install."
 fi
 
 
