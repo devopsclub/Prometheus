@@ -56,13 +56,13 @@ scrape_configs:
 scrape_configs:
   - job_name: 'nginx'
     target_groups:
-    - targets: ['localhost:9113']
+    - targets: ['localhost:9147']
 
 # Elastic
 scrape_configs:
   - job_name: 'elastic'
     target_groups:
-    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9113','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100']
+    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9147','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100']
 
 EOT
 
@@ -206,9 +206,9 @@ fi
 read -p "Install nginx_exporter? (y/n)" NGINX
 if [ "$NGINX" = "y" ]; then
 
-go get -u github.com/discordianfish/nginx_exporter
+go get github.com/markuslindenberg/nginx_request_exporter
 
-cd ~/go/src/github.com/discordianfish/nginx_exporter
+cd ~/go/src/github.com/markuslindenberg/nginx_request_exporter
 
 go get
 
@@ -218,9 +218,9 @@ echo " -> NGINX exporter installed ..."
 
 cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
-sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
+cd ~/go/src/github.com/markuslindenberg/nginx_request_exporter
 
-cd ~/go/src/github.com/prometheus/mysqld_exporter
+sudo nohup ./nginx_request_exporter > ~/logs/nginx_exporter.log 2>&1 &
 
 EOT
 
