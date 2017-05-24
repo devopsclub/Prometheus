@@ -5,6 +5,19 @@ echo "Prometheus & al install script"
 
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
 
+cd ~/Prometheus/src/
+
+chmod 755 elastic.sh
+chmod 755 go.sh
+chmod 755 mysql.sh
+chmod 755 nginx.sh
+chmod 755 phpfm.sh
+chmod 755 prometheus-server.sh
+chmod 755 prometheus.sh
+
+cd ~/
+
+
 read -p "Install prometheus, node_exporter? (y/n)" PROMETHEUS
 if [ "$PROMETHEUS" = "y" ]; then
 
