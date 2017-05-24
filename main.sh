@@ -58,7 +58,7 @@ cat <<EOT >> /usr/local/bin/prometheus-server.sh
 
 cd ~/go/src/github.com/oliver006/redis_exporter
 
-sudo nohup ./redis_exporter --redis.password="${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
+sudo nohup ./redis_exporter --redis.password "${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
 
 EOT
 
