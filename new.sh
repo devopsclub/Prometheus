@@ -1,6 +1,17 @@
 #!/bin/bash
 # Prometheus & exporters install script
 
+
+# SETUP : MYSQL & Apache:
+
+# add line to /etc/apache2/mods-available/status.conf : <Location /server-status> :  Allow from 127.0.0.1
+
+# <Location /server-status>
+#   Allow from 127.0.0.1
+#   Allow from localhost
+# </Location>
+
+# OR to /etc/apache2apache2.conf
 echo "Prometheus & al install script"
 
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
@@ -72,7 +83,8 @@ scrape_configs:
 
 EOT
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT > /usr/local/bin/prometheus-server.bash
+#!/bin/bash
 
 cd /usr/bin
 
@@ -94,20 +106,14 @@ cat <<EOT > /etc/systemd/system/prometheus-server.service
 After=mysql.service
 
 [Service]
-ExecStart=/usr/local/bin/prometheus-server.sh
+ExecStart=/usr/local/bin/prometheus-server.bash
 
 [Install]
 WantedBy=default.target
 
 EOT
 
-cat <<EOT > /usr/local/bin/prometheus-server.sh
-#!/bin/sh
-
-
-EOT
-
-chmod 744 /usr/local/bin/prometheus-server.sh
+chmod 744 /usr/local/bin/prometheus-server.bash
 
 chmod 664 /etc/systemd/system/prometheus-server.service
 
@@ -151,7 +157,7 @@ go get
 go build
 
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/neezgee/apache_exporter
 
@@ -180,7 +186,7 @@ go get
 
 go build
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/oliver006/redis_exporter
 
@@ -197,13 +203,23 @@ echo "Skipping redis_exporter installation."
 fi
 
 
-read -p "MySQL root password: (Enter to skip mysql_exporter)" MYSQLPASS
+read -p "MySQL root password: (Enter to skip MYSQL setup)" MYSQLPASS
 if [ "$MYSQLPASS" != "" ]; then
-echo "Installing mysql_exporter..."
 
 mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;"
 mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
 mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
+
+else
+  
+echo "Skipping mySQL setup."
+
+fi
+
+
+read -p "Install nginx_exporter? (y/n)" MYSQL
+if [ "$MYSQL" = "y" ]; then
+echo "Installing mysql_exporter..."
 
 go get -u github.com/prometheus/mysqld_exporter
 
@@ -213,17 +229,21 @@ go get
 
 go build
 
+cat <<EOT >> ~/.bashrc
+
 export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
+
+EOT
 
 echo " -> This will take a while ... "
 
 make
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/prometheus/mysqld_exporter
 
-sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
+sudo nohup ./mysqld_exporter
 
 EOT
 
@@ -249,7 +269,7 @@ go build
 
 echo " -> NGINX exporter installed ..."
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/markuslindenberg/nginx_request_exporter
 
@@ -276,7 +296,7 @@ cd phpfpm_exporter/
 
 echo " -> PHPFM exporter installed ..."
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/phpfpm_exporter/bin/
 
@@ -302,7 +322,7 @@ go build
 
 echo " -> ElasticSearch exporter installed ..."
 
-cat <<EOT >> /usr/local/bin/prometheus-server.sh
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
 
@@ -314,7 +334,6 @@ else
 echo "Skipping elastic_exporter installation."
 
 fi
-
 
 systemctl daemon-reload
 
