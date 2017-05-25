@@ -5,18 +5,9 @@ echo "Prometheus & al install script"
 
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
 
-#echo "Enter redis password"
 
-# read redispassword
-
-
-read -p "You will need your root MYSQL password. Continue (y/n)?" CONT
-if [ "$CONT" = "y" ]; then
-  echo " -> Starting Script ... ";
-else
-  echo "Skipped. Have a nice day."
-  exit 0
-fi
+read -p "Install prometheus, node_exporter? (y/n)" PROMETHEUS
+if [ "$PROMETHEUS" = "y" ]; then
 
 sudo apt-get update
 sudo apt-get install prometheus
@@ -65,18 +56,61 @@ scrape_configs:
 scrape_configs:
   - job_name: 'nginx'
     target_groups:
-    - targets: ['localhost:9113']
+    - targets: ['localhost:9147']
+
+# APACHE
+scrape_configs:
+  - job_name: 'apache'
+    target_groups:
+    - targets: ['localhost:9117']
 
 # Elastic
 scrape_configs:
   - job_name: 'elastic'
     target_groups:
-    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9113','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100']
+    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9147','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100', 'localhost:9117']
 
 EOT
 
-echo “ -> Configured prometheus.yml ...”
+cat <<EOT > /usr/local/bin/prometheus-server.bash
+#!/bin/bash
 
+cd /usr/bin
+
+sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
+
+EOT
+
+echo “ -> Configured prometheus ...”
+else
+echo "Skipping prometheus, node_exporter install."
+fi
+
+
+# Setup prometheus server service
+
+cat <<EOT > /etc/systemd/system/prometheus-server.service
+
+[Unit]
+After=mysql.service
+
+[Service]
+ExecStart=/usr/local/bin/prometheus-server.bash
+
+[Install]
+WantedBy=default.target
+
+EOT
+
+chmod 744 /usr/local/bin/prometheus-server.bash
+
+chmod 664 /etc/systemd/system/prometheus-server.service
+
+read -p "Install GoLang? (y/n) - required for most exporters" GO
+if [ "$GO" = "y" ]; then
+# sh ./src/go.sh
+
+#!/bin/bash
 sudo apt-get install golang
 
 # Set Go variables
@@ -89,8 +123,49 @@ export GOPATH=$HOME/go
 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 EOT
 
+export GOROOT=/usr/lib/go
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
 source /etc/profile.d/goenv.sh
 
+echo “ -> Configured Golang ...”
+else
+echo "Skipping golang install."
+fi
+
+read -p "Install Apache exporter? (y/n)" APACHE
+if [ "$APACHE" = "y" ]; then
+
+go get github.com/neezgee/apache_exporter
+
+cd ~/go/src/github.com/neezgee/apache_exporter
+
+go get
+
+go build
+
+
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
+
+cd ~/go/src/github.com/neezgee/apache_exporter
+
+sudo nohup ./apache_exporter > ~/logs/apache_exporter.log 2>&1 &
+
+
+EOT
+
+
+echo “ -> Configured Apache ...”
+else
+echo "Skipping apache_exporter install."
+fi
+
+
+read -p "Redis password: (Enter to skip redis_exporter)" REDISPASS
+if [ "$REDISPASS" != "" ]; then
+
+echo "Installing redis_exporter..."
 
 go get www.github.com/oliver006/redis_exporter.git
 
@@ -100,32 +175,40 @@ go get
 
 go build
 
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
+
+cd ~/go/src/github.com/oliver006/redis_exporter
+
+sudo nohup ./redis_exporter --redis.password "${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
+
+EOT
+
 echo " -> Redis exporter installed ..."
 
-# RUN REDIS:
-# cd ~/go/src/github.com/oliver006/redis_exporter
-# ./redis_exporter
+else
+ 
+echo "Skipping redis_exporter installation."
 
-go get -u github.com/justwatchcom/elasticsearch_exporter
-
-cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
-
-go get
-
-go build
-
-echo " -> ElasticSearch exporter installed ..."
-
-# RUN ELASTIC:
-# cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
-# ./elasticsearch_exporter
+fi
 
 
-# MYSQL COMMANDS:
-# CREATE USER 'exporter'@'localhost' IDENTIFIED BY 'XXXXXXXX' WITH MAX_USER_CONNECTIONS 3;
-# GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'localhost';
+read -p "MySQL root password: (Enter to skip MYSQL setup)" MYSQLPASS
+if [ "$MYSQLPASS" != "" ]; then
 
-# /var/www/current/.env for mysql passwords
+mysql -uroot -p${MYSQLPASS} -e "CREATE USER 'mysqlexporter' IDENTIFIED BY 'test' WITH MAX_USER_CONNECTIONS 3;"
+mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'mysqlexporter';"
+mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
+
+else
+  
+echo "Skipping mySQL setup."
+
+fi
+
+
+read -p "Install nginx_exporter? (y/n)" MYSQL
+if [ "$MYSQL" = "y" ]; then
+echo "Installing mysql_exporter..."
 
 go get -u github.com/prometheus/mysqld_exporter
 
@@ -135,16 +218,41 @@ go get
 
 go build
 
+cat <<EOT >> ~/.bashrc
+
+export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
+
+EOT
+
+source ~/.bashrc
+
 echo " -> This will take a while ... "
 
 make
 
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
+
+cd ~/go/src/github.com/prometheus/mysqld_exporter
+
+sudo nohup ./mysqld_exporter
+
+EOT
+
 echo " -> MYSQL exporter installed ..."
 
+else
+ 	
+echo "Skipping mySQL installation."
 
-go get -u github.com/discordianfish/nginx_exporter
+fi
 
-cd ~/go/src/github.com/discordianfish/nginx_exporter
+
+read -p "Install nginx_exporter? (y/n)" NGINX
+if [ "$NGINX" = "y" ]; then
+
+go get github.com/markuslindenberg/nginx_request_exporter
+
+cd ~/go/src/github.com/markuslindenberg/nginx_request_exporter
 
 go get
 
@@ -152,9 +260,22 @@ go build
 
 echo " -> NGINX exporter installed ..."
 
-# TO RUN:
-# cd ~/go/src/github.com/discordianfish/nginx_exporter
-# ./nginx_exporter
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
+
+cd ~/go/src/github.com/markuslindenberg/nginx_request_exporter
+
+sudo nohup ./nginx_request_exporter > ~/logs/nginx_exporter.log 2>&1 &
+
+EOT
+
+else
+ 
+echo "Skipping nginx installation."
+
+fi
+
+read -p "Install phpfm_exporter? (y/n)" PHPFM
+if [ "$PHPFM" = "y" ]; then
 
 cd ~/
 
@@ -166,92 +287,50 @@ cd phpfpm_exporter/
 
 echo " -> PHPFM exporter installed ..."
 
-# TO RUN 
-# cd phpfpm_exporter/bin/
-# ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL}
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
-## Start all servers
+cd ~/phpfpm_exporter/bin/
 
-#cat <<EOT>> /etc/init/prometheus_server_start.conf
-
-cat <<EOT > /etc/systemd/system/prometheus-server.service
-
-[Unit]
-After=mysql.service
-
-[Service]
-ExecStart=/usr/local/bin/prometheus-server.sh
-
-[Install]
-WantedBy=default.target
+sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
 
 EOT
 
-cat <<EOT > /usr/local/bin/prometheus-server.sh
-#!/bin/sh
+else
+ 	echo "Skipping phpfm installation."
+fi
 
-cd ~/phpfpm_exporter/bin/
-sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
 
-cd ~/go/src/github.com/oliver006/redis_exporter
+read -p "Install elastic_exporter services? (y/n)" ELASTIC
+if [ "$ELASTIC" = "y" ]; then
 
-sudo nohup ./redis_exporter > ~/logs/redis_exporter.log 2>&1 &
+go get -u github.com/justwatchcom/elasticsearch_exporter
+
+cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
+
+go get
+
+go build
+
+echo " -> ElasticSearch exporter installed ..."
+
+cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
 
 sudo nohup ./elasticsearch_exporter > ~/logs/elasticsearch_exporter.log 2>&1 &
 
-cd ~/go/src/github.com/discordianfish/nginx_exporter
-
-sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
-
-cd ~/go/src/github.com/prometheus/mysqld_exporter
-
-sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
-
-cd /usr/bin
-
-sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
-
 EOT
+else
 
-chmod 744 /usr/local/bin/prometheus-server.sh
+echo "Skipping elastic_exporter installation."
 
-chmod 664 /etc/systemd/system/prometheus-server.service
+fi
 
 systemctl daemon-reload
 
 systemctl enable prometheus-server.service
 
 systemctl start prometheus-server.service
-
-# sudo ln -f -s /etc/init/prometheus_server_start.conf /etc/init.d/prometheus_server_start
-
-
-
-
-cd ~/phpfpm_exporter/bin/
-sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
-
-cd ~/go/src/github.com/oliver006/redis_exporter
-
-sudo nohup ./redis_exporter > ~/logs/redis_exporter.log 2>&1 &
-
-cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
-
-sudo nohup ./elasticsearch_exporter > ~/logs/elasticsearch_exporter.log 2>&1 &
-
-cd ~/go/src/github.com/discordianfish/nginx_exporter
-
-sudo nohup ./nginx_exporter > ~/logs/nginx_exporter.log 2>&1 &
-
-cd ~/go/src/github.com/prometheus/mysqld_exporter
-
-sudo nohup ./mysqld_exporter > ~/logs/mysqld_exporter.log 2>&1 &
-
-cd /usr/bin
-
-sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
 
 
 echo " -> Script finished. Have a nice day."
