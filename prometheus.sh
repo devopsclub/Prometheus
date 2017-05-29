@@ -16,62 +16,63 @@ sudo apt-get install prometheus
 sudo apt-get install prometheus-node-exporter
 
 cat <<EOT > /etc/prometheus/prometheus.yml
-#Setup Prometheus.yml
+# Sample config for Prometheus.
 
 global:
- scrape_interval: 10s
- evaluation_interval: 5s
+  scrape_interval:     5s # By default, scrape targets every 15 seconds.
+  evaluation_interval: 5s # By default, scrape targets every 15 seconds.
+  # scrape_timeout is set to the global default (10s).
 
-#Prometheus
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+      monitor: 'example'
+
+# Load and evaluate rules in this file every 'evaluation_interval' seconds.
+rule_files:
+  # - "first.rules"
+  # - "second.rules"
+
+# A scrape configuration containing exactly one endpoint to scrape: 
+# Here it's Prometheus itself.
 scrape_configs:
-  - job_name: "prometheus"
-    scrape_interval: "5s"
+  - job_name: 'prometheus'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+    scrape_timeout: 10s
+
+
     target_groups:
-    - targets: ['localhost:9090']
+      - targets: ['localhost:9090']
 
-#Node exports
-scrape_configs:
-  - job_name: "node"
-    scrape_interval: "5s"
+  - job_name: 'node'
     target_groups:
-    - targets: ['localhost:9100']
+      - targets: ['localhost:9100']
 
-# Redis
-scrape_configs:
-  - job_name: redis_exporter
+  - job_name: 'redis_exporter'
     target_groups:
-    - targets: ['localhost:9121']
+      - targets: ['localhost:9121']
 
-# MySQL
-scrape_configs:
- - job_name: 'mysqld'
-   target_groups:
-   - targets: ['localhost:9104']
+  - job_name: 'mysqld'
+    target_groups:
+      - targets: ['localhost:9104']
 
-# FPM
-scrape_configs:
   - job_name: 'fpm'
     target_groups:
-    - targets: ['localhost:9099']
+      - targets: ['localhost:9099']
 
-# NGINX
-scrape_configs:
   - job_name: 'nginx'
     target_groups:
-    - targets: ['localhost:9147']
+      - targets: ['localhost:9147']
 
-# APACHE
-scrape_configs:
   - job_name: 'apache'
     target_groups:
-    - targets: ['localhost:9117']
+      - targets: ['localhost:9117']
 
-# Elastic
-scrape_configs:
   - job_name: 'elastic'
     target_groups:
-    - targets: ['localhost:9108', 'localhost:9090', 'localhost:9147','localhost:9099', 'localhost:9104', 'localhost:9121', 'localhost:9100', 'localhost:9117']
-
+      - targets: ['localhost:9108']
 EOT
 
 cat <<EOT > /usr/local/bin/prometheus-server.bash
@@ -335,6 +336,10 @@ systemctl daemon-reload
 systemctl enable prometheus-server.service
 
 systemctl start prometheus-server.service
+
+killall -9 prometheus
+
+/usr/local/bin/prometheus-server.bash
 
 
 echo " -> Script finished. Have a nice day."
