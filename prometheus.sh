@@ -6,6 +6,8 @@ echo "Prometheus & al install script"
 echo "This script installs Prometheus, node_exporter, mysql_exporter, nginx_exporter, redis_exporter, elastic_exporter"
 
 
+# NGINX conf: access_log syslog:server=127.0.0.1:9514 prometheus;
+
 read -p "Install prometheus, node_exporter? (y/n)" PROMETHEUS
 if [ "$PROMETHEUS" = "y" ]; then
 
@@ -206,7 +208,7 @@ echo "Skipping mySQL setup."
 fi
 
 
-read -p "Install nginx_exporter? (y/n)" MYSQL
+read -p "Install mysql_exporter? (y/n)" MYSQL
 if [ "$MYSQL" = "y" ]; then
 echo "Installing mysql_exporter..."
 
@@ -217,6 +219,8 @@ cd ~/go/src/github.com/prometheus/mysqld_exporter
 go get
 
 go build
+
+export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
 
 cat <<EOT >> ~/.bashrc
 
