@@ -33,7 +33,7 @@ rule_files:
   # - "first.rules"
   # - "second.rules"
 
-# A scrape configuration containing exactly one endpoint to scrape: 
+# A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
@@ -189,7 +189,7 @@ EOT
 echo " -> Redis exporter installed ..."
 
 else
- 
+
 echo "Skipping redis_exporter installation."
 
 fi
@@ -203,7 +203,7 @@ mysql -uroot -p${MYSQLPASS} -e "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.*
 mysql -uroot -p${MYSQLPASS} -e "FLUSH PRIVILEGES;"
 
 else
-  
+
 echo "Skipping mySQL setup."
 
 fi
@@ -239,14 +239,14 @@ cat <<EOT >> /usr/local/bin/prometheus-server.bash
 
 cd ~/go/src/github.com/prometheus/mysqld_exporter
 
-sudo nohup ./mysqld_exporter
+sudo nohup ./mysqld_exporter --config.my-cnf=/etc/mysql/my.cnf > /dev/null 2>&1 &
 
 EOT
 
 echo " -> MYSQL exporter installed ..."
 
 else
- 	
+
 echo "Skipping mySQL installation."
 
 fi
@@ -274,7 +274,7 @@ sudo nohup ./nginx_request_exporter > ~/logs/nginx_exporter.log 2>&1 &
 EOT
 
 else
- 
+
 echo "Skipping nginx installation."
 
 fi
