@@ -42,7 +42,6 @@ scrape_configs:
     scrape_interval: 5s
     scrape_timeout: 10s
 
-
     target_groups:
       - targets: ['localhost:9090']
 
@@ -50,29 +49,6 @@ scrape_configs:
     target_groups:
       - targets: ['localhost:9100']
 
-  - job_name: 'redis_exporter'
-    target_groups:
-      - targets: ['localhost:9121']
-
-  - job_name: 'mysqld'
-    target_groups:
-      - targets: ['localhost:9104']
-
-  - job_name: 'fpm'
-    target_groups:
-      - targets: ['localhost:9099']
-
-  - job_name: 'nginx'
-    target_groups:
-      - targets: ['localhost:9147']
-
-  - job_name: 'apache'
-    target_groups:
-      - targets: ['localhost:9117']
-
-  - job_name: 'elastic'
-    target_groups:
-      - targets: ['localhost:9108']
 EOT
 
 cat <<EOT > /usr/local/bin/prometheus-server.bash
@@ -155,6 +131,13 @@ cd ~/go/src/github.com/neezgee/apache_exporter
 
 sudo nohup ./apache_exporter > ~/logs/apache_exporter.log 2>&1 &
 
+EOT
+
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'apache'
+    target_groups:
+      - targets: ['localhost:9117']
 
 EOT
 
@@ -183,6 +166,14 @@ cat <<EOT >> /usr/local/bin/prometheus-server.bash
 cd ~/go/src/github.com/oliver006/redis_exporter
 
 sudo nohup ./redis_exporter --redis.password "${REDISPASS}" > ~/logs/redis_exporter.log 2>&1 &
+
+EOT
+
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'redis_exporter'
+    target_groups:
+      - targets: ['localhost:9121']
 
 EOT
 
@@ -226,6 +217,14 @@ export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
 cat <<EOT >> ~/.bashrc
 
 export DATA_SOURCE_NAME='mysqlexporter:test@unix(/var/run/mysqld/mysqld.sock)/'
+
+EOT
+
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'mysqld'
+    target_groups:
+      - targets: ['localhost:9104']
 
 EOT
 
@@ -273,6 +272,14 @@ sudo nohup ./nginx_request_exporter > ~/logs/nginx_exporter.log 2>&1 &
 
 EOT
 
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'nginx'
+    target_groups:
+      - targets: ['localhost:9147']
+
+EOT
+
 else
 
 echo "Skipping nginx installation."
@@ -297,6 +304,14 @@ cat <<EOT >> /usr/local/bin/prometheus-server.bash
 cd ~/phpfpm_exporter/bin/
 
 sudo nohup ./phpfpm_exporter --listen.address=localhost:9099 {PHPFORM URL} > ~/logs/phpfm_exporter.log 2>&1 &
+
+EOT
+
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'fpm'
+    target_groups:
+      - targets: ['localhost:9099']
 
 EOT
 
@@ -325,6 +340,14 @@ cd ~/go/src/github.com/justwatchcom/elasticsearch_exporter
 sudo nohup ./elasticsearch_exporter > ~/logs/elasticsearch_exporter.log 2>&1 &
 
 EOT
+
+cat <<EOT >> /etc/prometheus/prometheus.yml
+
+  - job_name: 'elastic'
+    target_groups:
+      - targets: ['localhost:9108']
+EOT
+
 else
 
 echo "Skipping elastic_exporter installation."
