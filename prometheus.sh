@@ -75,15 +75,6 @@ scrape_configs:
       - targets: ['localhost:9108']
 EOT
 
-cat <<EOT > /usr/local/bin/prometheus-server.bash
-#!/bin/bash
-
-cd /usr/bin
-
-sudo nohup ./prometheus > ~/logs/prometheus.log 2>&1 &
-
-EOT
-
 echo “ -> Configured prometheus ...”
 else
 echo "Skipping prometheus, node_exporter install."
@@ -98,14 +89,13 @@ cat <<EOT > /etc/systemd/system/prometheus-server.service
 After=mysql.service
 
 [Service]
-ExecStart=/usr/local/bin/prometheus-server.bash
+ExecStart=/usr/bin/prometheus
+Restart=always
 
 [Install]
 WantedBy=default.target
 
 EOT
-
-chmod 744 /usr/local/bin/prometheus-server.bash
 
 chmod 664 /etc/systemd/system/prometheus-server.service
 
@@ -331,15 +321,10 @@ echo "Skipping elastic_exporter installation."
 
 fi
 
-systemctl daemon-reload
-
 systemctl enable prometheus-server.service
-
+systemctl daemon-reload
 systemctl start prometheus-server.service
 
 killall -9 prometheus
-
-/usr/local/bin/prometheus-server.bash
-
 
 echo " -> Script finished. Have a nice day."
